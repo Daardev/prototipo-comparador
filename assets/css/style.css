@@ -1,0 +1,150 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #f4f4f4;
+  color: #222;
+}
+
+header, .controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #222;
+  color: #fff;
+}
+
+.main-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 1rem;
+}
+
+.main-nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.main-nav a:hover {
+  background-color: #444;
+}
+
+.main-nav a.active {
+  background-color: #444;
+  font-weight: bold;
+}
+
+button {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.table-container {
+  overflow-x: auto;
+  padding: 1rem;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.section-title {
+  background: #eaeaea;
+  text-align: left;
+}
+
+.field-container {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reset-field {
+  background: #ffdddd;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.delete-row, .delete-col {
+  background: #ffdddd;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.delete-row:hover, .delete-col:hover {
+  background: #ff9999;
+}
+
+td .delete-row {
+  margin-left: 8px;
+}
+
+.section-title .delete-row {
+  float: right;
+  background: #ff9999;
+}
+
+.section-title .delete-row:hover {
+  background: #ff6666;
+}
+
+.edit-name {
+  background: #eef2ff;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+}
+
+.edit-name:hover {
+  background: #d6e0ff;
+}
+
+/* Estilos para mensajes (toasts) */
+.mensaje {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 10px 20px;
+  border-radius: 5px;
+  color: #fff;
+  z-index: 1000;
+  max-width: 80%;
+  word-wrap: break-word;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.mensaje.success {
+  background-color: #4CAF50;
+}
+
+.mensaje.error {
+  background-color: #f44336;
+}
+
+.mensaje.info {
+  background-color: #2196F3;
+}

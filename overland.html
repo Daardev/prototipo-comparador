@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overland | Cofradía Partner</title>
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <header>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="carpas.html">Carpas</a></li>
+        <li><a href="outdoor.html">Outdoor</a></li>
+        <li><a href="overland.html" class="active">Overland</a></li>
+      </ul>
+    </nav>
+    <h1>Overland</h1>
+    <button id="logoutBtn">Cerrar sesión</button>
+  </header>
+
+  <div class="controls">
+  <!-- Botón de sincronizar con Firebase eliminado -->
+    <button id="saveFirebase">💾 Guardar en Firebase</button>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaComparativa">
+      <thead id="tablaHead"></thead>
+      <tbody id="tablaBody"></tbody>
+    </table>
+  </div>
+
+  <script type="module" src="assets/js/comparador.js"></script>
+</body>
+</html>
