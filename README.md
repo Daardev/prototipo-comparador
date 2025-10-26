@@ -45,3 +45,22 @@ El proyecto permite crear, editar y gestionar dinámicamente tablas comparativas
 
 ## 🧰 Estructura del proyecto
 
+📁 /prototipo-comparador
+├── index.html
+├── carpas.html
+├── overland.html
+├── outdoor.html
+├── /css
+│ └── style.css
+├── /js
+│ ├── app.js # Punto de entrada general
+│ ├── auth.js # Control de autenticación Firebase
+│ ├── comparador.js # Lógica principal del comparador (render, eventos, guardado)
+│ ├── config.js # Configuración de categorías, productos y secciones
+│ ├── dom.js # Renderizado dinámico de tablas y estructura visual
+│ ├── firebase.js # Inicialización de Firebase y configuración
+│ ├── storage.js # Manejo de localStorage (guardar, cargar, backup)
+│ ├── table.js # Lectura y reconstrucción de estructura de la tabla
+│ ├── utils.js # Funciones utilitarias (sanitizar, normalizar, helpers)
+│ └── ...
+└── /assets # (Opcional) Imágenes o recursos adicionales
