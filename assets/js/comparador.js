@@ -37,11 +37,13 @@ const categoria = normalizarCategoria(document.title);
 // ===============================================================
 // Lista de limpieza de event listeners
 let cleanupFunctions = [];
+let isInitialLoad = true;
 
 onAuthStateChanged(auth, (user) => {
   // Limpiar listeners anteriores
   cleanupFunctions.forEach(cleanup => cleanup());
   cleanupFunctions = [];
+  isInitialLoad = true;
 
   if (!user) {
     tablaHead.innerHTML = "";
@@ -59,37 +61,58 @@ onAuthStateChanged(auth, (user) => {
     cleanupFunctions.push(() => logoutBtn.removeEventListener("click", logoutHandler));
   }
 
-  crearTabla();
+  // Cargar tabla primero
+  crearTabla().then(() => {
+    // Después de cargar, marcar como carga completada
+    isInitialLoad = false;
+    console.log("✅ Carga inicial completada para:", categoria);
+  });
 
   const saveBtnEl = document.getElementById("saveFirebase");
-  if (saveBtnEl) saveBtnEl.addEventListener("click", guardarDatos);
+  if (saveBtnEl) {
+    const saveHandler = () => guardarDatos();
+    saveBtnEl.addEventListener("click", saveHandler);
+    cleanupFunctions.push(() => saveBtnEl.removeEventListener("click", saveHandler));
+  }
 
   const syncBtnEl = document.getElementById("syncFirebase");
-  if (syncBtnEl) syncBtnEl.addEventListener("click", sincronizarDatos);
+  if (syncBtnEl) {
+    const syncHandler = () => sincronizarDatos();
+    syncBtnEl.addEventListener("click", syncHandler);
+    cleanupFunctions.push(() => syncBtnEl.removeEventListener("click", syncHandler));
+  }
 
-    // Escuchar cambios en tiempo real desde Firebase
+  // Escuchar cambios en tiempo real desde Firebase (después de la carga inicial)
   const unsubscribe = onSnapshot(
     doc(db, "comparadores", user.uid, "categorias", categoria),
-    (doc) => {
-      if (doc.exists()) {
-        const datosRemotos = doc.data();
-        const datosLocales = cargarBackupLocal(categoria);
+    (docSnapshot) => {
+      // Ignorar el primer evento durante la carga inicial
+      if (isInitialLoad) {
+        console.log("⏭️ Ignorando evento inicial de onSnapshot");
+        return;
+      }
+
+      if (docSnapshot.exists()) {
+        const datosRemotos = docSnapshot.data();
+        console.log("📥 Cambio detectado en Firebase para:", categoria);
         
-        // Comparar timestamps para ver si los datos remotos son más nuevos
-        if (datosRemotos.ultimaActualizacion > (datosLocales?.ultimaActualizacion || 0)) {
-          const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
-          crearTablaConEstructura(
-            { 
-              secciones: CONFIG.Secciones, 
-              productos: CONFIG[categoria], 
-              datos: estructuraRemota.datos 
-            },
-            tablaHead,
-            tablaBody
-          );
-          guardarEnLocalStorage(estructuraRemota, categoria);
-          mostrarMensaje("Datos actualizados desde Firebase", "info");
-        }
+        const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
+        
+        // Actualizar la tabla con los datos remotos
+        crearTablaConEstructura(
+          { 
+            secciones: CONFIG.Secciones, 
+            productos: CONFIG[categoria], 
+            datos: estructuraRemota.datos 
+          },
+          tablaHead,
+          tablaBody
+        );
+        
+        // Guardar los datos remotos en localStorage
+        guardarEnLocalStorage(estructuraRemota, categoria);
+        console.log("✅ Tabla actualizada con datos de Firebase");
+        mostrarMensaje("Datos actualizados desde Firebase", "info");
       }
     },
     (error) => {
@@ -97,11 +120,8 @@ onAuthStateChanged(auth, (user) => {
     }
   );
 
-  // Limpiar listener al cerrar sesión
-  logoutBtn.addEventListener("click", () => {
-    unsubscribe();
-    logout();
-  });
+  // Agregar el unsubscribe a la lista de limpieza
+  cleanupFunctions.push(() => unsubscribe());
 
   // === Botones "+ Agregar" ===
   document.addEventListener("agregarCaracteristica", (e) => {
@@ -278,33 +298,54 @@ async function sincronizarDatos() {
     if (saveBtn) saveBtn.disabled = true;
     if (syncBtn) syncBtn.disabled = true;
 
+    mostrarMensaje("Sincronizando datos...", "info");
+
     const userId = auth.currentUser?.uid;
     if (!userId) {
       throw new Error("Usuario no autenticado");
     }
 
+    console.log("Sincronizando categoría:", categoria);
     const docRef = doc(db, "comparadores", userId, "categorias", categoria);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
       const datosRemotos = docSnap.data();
+      console.log("Datos remotos obtenidos:", datosRemotos);
+      
       const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
+      console.log("Estructura sanitizada:", estructuraRemota);
+      console.log("Datos a renderizar:", estructuraRemota.datos);
+      console.log("Productos de CONFIG:", CONFIG[categoria]);
+      
+      // Limpiar la tabla antes de actualizar
+      tablaHead.innerHTML = "";
+      tablaBody.innerHTML = "";
       
       // Actualizar la tabla con los datos remotos
+      const estructuraParaTabla = { 
+        secciones: CONFIG.Secciones, 
+        productos: CONFIG[categoria], 
+        datos: estructuraRemota.datos 
+      };
+      
+      console.log("Estructura completa para tabla:", estructuraParaTabla);
+      
       crearTablaConEstructura(
-        { 
-          secciones: CONFIG.Secciones, 
-          productos: CONFIG[categoria], 
-          datos: estructuraRemota.datos 
-        },
+        estructuraParaTabla,
         tablaHead,
         tablaBody
       );
+      
+      console.log("Tabla creada, verificando contenido:");
+      console.log("- Filas en thead:", tablaHead.querySelectorAll("tr").length);
+      console.log("- Filas en tbody:", tablaBody.querySelectorAll("tr").length);
       
       // Guardar los datos remotos en localStorage
       guardarEnLocalStorage(estructuraRemota, categoria);
       mostrarMensaje("Datos sincronizados desde Firebase correctamente", "success");
     } else {
+      console.warn("No se encontraron datos en Firebase para:", categoria);
       mostrarMensaje("No hay datos en Firebase para sincronizar", "info");
     }
   } catch (error) {
