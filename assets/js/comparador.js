@@ -65,7 +65,6 @@ onAuthStateChanged(auth, (user) => {
   crearTabla().then(() => {
     // Después de cargar, marcar como carga completada
     isInitialLoad = false;
-    console.log("✅ Carga inicial completada para:", categoria);
   });
 
   const saveBtnEl = document.getElementById("saveFirebase");
@@ -84,18 +83,15 @@ onAuthStateChanged(auth, (user) => {
 
   // Escuchar cambios en tiempo real desde Firebase (después de la carga inicial)
   const unsubscribe = onSnapshot(
-    doc(db, "comparadores", user.uid, "categorias", categoria),
+    doc(db, "comparadores", "shared", "categorias", categoria),
     (docSnapshot) => {
       // Ignorar el primer evento durante la carga inicial
       if (isInitialLoad) {
-        console.log("⏭️ Ignorando evento inicial de onSnapshot");
         return;
       }
 
       if (docSnapshot.exists()) {
         const datosRemotos = docSnapshot.data();
-        console.log("📥 Cambio detectado en Firebase para:", categoria);
-        
         const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
         
         // Actualizar la tabla con los datos remotos
@@ -111,7 +107,6 @@ onAuthStateChanged(auth, (user) => {
         
         // Guardar los datos remotos en localStorage
         guardarEnLocalStorage(estructuraRemota, categoria);
-        console.log("✅ Tabla actualizada con datos de Firebase");
         mostrarMensaje("Datos actualizados desde Firebase", "info");
       }
     },
@@ -192,9 +187,8 @@ async function crearTabla() {
   const secciones = JSON.parse(JSON.stringify(CONFIG.Secciones));
 
   try {
-    // 1. Intentar cargar datos de Firestore primero
-    const userId = auth.currentUser.uid;
-    const docRef = doc(db, "comparadores", userId, "categorias", categoria);
+    // 1. Intentar cargar datos de Firestore primero (compartido)
+    const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
@@ -268,12 +262,9 @@ async function guardarDatos() {
     estructura.version = "1.0";
     
     guardarEnLocalStorage(estructura, categoria);
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      throw new Error("Usuario no autenticado");
-    }
-
-    const docRef = doc(db, "comparadores", userId, "categorias", categoria);
+    
+    // Guardar en ruta compartida
+    const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
     await setDoc(docRef, estructura, { merge: true });
     mostrarMensaje("Datos guardados en Firebase.", "success");
   } catch (error) {
@@ -300,23 +291,12 @@ async function sincronizarDatos() {
 
     mostrarMensaje("Sincronizando datos...", "info");
 
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
-      throw new Error("Usuario no autenticado");
-    }
-
-    console.log("Sincronizando categoría:", categoria);
-    const docRef = doc(db, "comparadores", userId, "categorias", categoria);
+    const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
       const datosRemotos = docSnap.data();
-      console.log("Datos remotos obtenidos:", datosRemotos);
-      
       const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
-      console.log("Estructura sanitizada:", estructuraRemota);
-      console.log("Datos a renderizar:", estructuraRemota.datos);
-      console.log("Productos de CONFIG:", CONFIG[categoria]);
       
       // Limpiar la tabla antes de actualizar
       tablaHead.innerHTML = "";
@@ -329,23 +309,16 @@ async function sincronizarDatos() {
         datos: estructuraRemota.datos 
       };
       
-      console.log("Estructura completa para tabla:", estructuraParaTabla);
-      
       crearTablaConEstructura(
         estructuraParaTabla,
         tablaHead,
         tablaBody
       );
       
-      console.log("Tabla creada, verificando contenido:");
-      console.log("- Filas en thead:", tablaHead.querySelectorAll("tr").length);
-      console.log("- Filas en tbody:", tablaBody.querySelectorAll("tr").length);
-      
       // Guardar los datos remotos en localStorage
       guardarEnLocalStorage(estructuraRemota, categoria);
       mostrarMensaje("Datos sincronizados desde Firebase correctamente", "success");
     } else {
-      console.warn("No se encontraron datos en Firebase para:", categoria);
       mostrarMensaje("No hay datos en Firebase para sincronizar", "info");
     }
   } catch (error) {

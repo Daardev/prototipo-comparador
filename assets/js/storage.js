@@ -14,7 +14,6 @@ export function guardarEnLocalStorage(estructura, categoria, tablaBody, CONFIG) 
     }
     const key = `backup_${categoria}`;
     localStorage.setItem(key, JSON.stringify(estructura));
-    console.log('Cambios guardados localmente:', { key, estructura });
   } catch (err) {
     console.warn('No se pudo guardar backup local:', err);
   }
