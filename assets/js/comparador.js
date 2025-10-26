@@ -3,8 +3,10 @@ import { protegerRuta, logout } from "./auth.js";
 import { CONFIG } from "./config.js";
 import { db, auth } from "./firebase.js";
 import {
-  doc,
-  setDoc,
+  doc, 
+  getDoc,
+  setDoc, 
+  onSnapshot,
   enableIndexedDbPersistence,
 } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
@@ -33,16 +35,73 @@ const tablaBody = document.getElementById("tablaBody");
 const categoria = normalizarCategoria(document.title);
 
 // ===============================================================
+// Lista de limpieza de event listeners
+let cleanupFunctions = [];
+
 onAuthStateChanged(auth, (user) => {
-  if (!user) return;
+  // Limpiar listeners anteriores
+  cleanupFunctions.forEach(cleanup => cleanup());
+  cleanupFunctions = [];
+
+  if (!user) {
+    tablaHead.innerHTML = "";
+    tablaBody.innerHTML = "";
+    return;
+  }
 
   const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) logoutBtn.addEventListener("click", logout);
+  if (logoutBtn) {
+    const logoutHandler = () => {
+      cleanupFunctions.forEach(cleanup => cleanup());
+      logout();
+    };
+    logoutBtn.addEventListener("click", logoutHandler);
+    cleanupFunctions.push(() => logoutBtn.removeEventListener("click", logoutHandler));
+  }
 
   crearTabla();
 
   const saveBtnEl = document.getElementById("saveFirebase");
   if (saveBtnEl) saveBtnEl.addEventListener("click", guardarDatos);
+
+  const syncBtnEl = document.getElementById("syncFirebase");
+  if (syncBtnEl) syncBtnEl.addEventListener("click", sincronizarDatos);
+
+    // Escuchar cambios en tiempo real desde Firebase
+  const unsubscribe = onSnapshot(
+    doc(db, "comparadores", user.uid, "categorias", categoria),
+    (doc) => {
+      if (doc.exists()) {
+        const datosRemotos = doc.data();
+        const datosLocales = cargarBackupLocal(categoria);
+        
+        // Comparar timestamps para ver si los datos remotos son más nuevos
+        if (datosRemotos.ultimaActualizacion > (datosLocales?.ultimaActualizacion || 0)) {
+          const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
+          crearTablaConEstructura(
+            { 
+              secciones: CONFIG.Secciones, 
+              productos: CONFIG[categoria], 
+              datos: estructuraRemota.datos 
+            },
+            tablaHead,
+            tablaBody
+          );
+          guardarEnLocalStorage(estructuraRemota, categoria);
+          mostrarMensaje("Datos actualizados desde Firebase", "info");
+        }
+      }
+    },
+    (error) => {
+      console.error("Error al escuchar cambios:", error);
+    }
+  );
+
+  // Limpiar listener al cerrar sesión
+  logoutBtn.addEventListener("click", () => {
+    unsubscribe();
+    logout();
+  });
 
   // === Botones "+ Agregar" ===
   document.addEventListener("agregarCaracteristica", (e) => {
@@ -105,15 +164,40 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // ===============================================================
-function crearTabla() {
+async function crearTabla() {
   tablaHead.innerHTML = "";
   tablaBody.innerHTML = "";
 
   const productos = CONFIG[categoria];
   const secciones = JSON.parse(JSON.stringify(CONFIG.Secciones));
 
-  const localBackup = cargarBackupLocal(categoria);
+  try {
+    // 1. Intentar cargar datos de Firestore primero
+    const userId = auth.currentUser.uid;
+    const docRef = doc(db, "comparadores", userId, "categorias", categoria);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      // Si hay datos en Firestore, usarlos
+      const firestoreData = docSnap.data();
+      const estructuraFirestore = sanitizeEstructura(firestoreData, categoria, CONFIG);
+      crearTablaConEstructura(
+        { secciones, productos, datos: estructuraFirestore.datos },
+        tablaHead, 
+        tablaBody
+      );
+      // Actualizar localStorage con datos de Firestore
+      guardarEnLocalStorage(estructuraFirestore, categoria);
+      mostrarMensaje("Datos sincronizados desde Firebase", "success");
+      return;
+    }
+  } catch (error) {
+    console.error("Error al cargar datos de Firebase:", error);
+    mostrarMensaje("Error al cargar datos de Firebase, usando datos locales", "info");
+  }
 
+  // 2. Si no hay datos en Firestore o falló, usar localStorage
+  const localBackup = cargarBackupLocal(categoria);
   if (localBackup && !esEstructuraPorDefecto(localBackup)) {
     let estructuraLimpia = sanitizeEstructura(localBackup, categoria, CONFIG);
 
@@ -131,10 +215,11 @@ function crearTabla() {
     );
 
     guardarEnLocalStorage(estructuraLimpia, categoria);
-    mostrarMensaje("Datos restaurados correctamente.", "success");
+    mostrarMensaje("Datos restaurados desde almacenamiento local", "success");
     return;
   }
 
+  // 3. Si no hay datos en ningún lado, crear estructura inicial
   const estructuraInicial = sanitizeEstructura(
     { secciones, productos, datos: {} },
     categoria,
@@ -147,18 +232,93 @@ function crearTabla() {
 // ===============================================================
 async function guardarDatos() {
   try {
+    // Deshabilitar botones durante la operación
+    const saveBtn = document.getElementById("saveFirebase");
+    const syncBtn = document.getElementById("syncFirebase");
+    if (saveBtn) saveBtn.disabled = true;
+    if (syncBtn) syncBtn.disabled = true;
+
     const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
+    if (!estructura || !estructura.datos) {
+      throw new Error("Estructura de datos inválida");
+    }
+
+    // Agregar timestamp y versión
+    estructura.ultimaActualizacion = Date.now();
+    estructura.version = "1.0";
+    
     guardarEnLocalStorage(estructura, categoria);
-    const userId = auth.currentUser.uid;
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error("Usuario no autenticado");
+    }
+
     const docRef = doc(db, "comparadores", userId, "categorias", categoria);
     await setDoc(docRef, estructura, { merge: true });
     mostrarMensaje("Datos guardados en Firebase.", "success");
   } catch (error) {
-    mostrarMensaje("Error al guardar en Firebase.", "error");
+    console.error("Error al guardar en Firebase:", error);
+    mostrarMensaje(error.message || "Error al guardar en Firebase.", "error");
+  } finally {
+    // Re-habilitar botones después de la operación
+    const saveBtn = document.getElementById("saveFirebase");
+    const syncBtn = document.getElementById("syncFirebase");
+    if (saveBtn) saveBtn.disabled = false;
+    if (syncBtn) syncBtn.disabled = false;
   }
 }
 
 // ===============================================================
+// ===============================================================
+async function sincronizarDatos() {
+  try {
+    // Deshabilitar botones durante la sincronización
+    const saveBtn = document.getElementById("saveFirebase");
+    const syncBtn = document.getElementById("syncFirebase");
+    if (saveBtn) saveBtn.disabled = true;
+    if (syncBtn) syncBtn.disabled = true;
+
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      throw new Error("Usuario no autenticado");
+    }
+
+    const docRef = doc(db, "comparadores", userId, "categorias", categoria);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const datosRemotos = docSnap.data();
+      const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
+      
+      // Actualizar la tabla con los datos remotos
+      crearTablaConEstructura(
+        { 
+          secciones: CONFIG.Secciones, 
+          productos: CONFIG[categoria], 
+          datos: estructuraRemota.datos 
+        },
+        tablaHead,
+        tablaBody
+      );
+      
+      // Guardar los datos remotos en localStorage
+      guardarEnLocalStorage(estructuraRemota, categoria);
+      mostrarMensaje("Datos sincronizados desde Firebase correctamente", "success");
+    } else {
+      mostrarMensaje("No hay datos en Firebase para sincronizar", "info");
+    }
+  } catch (error) {
+    console.error("Error al sincronizar con Firebase:", error);
+    mostrarMensaje(error.message || "Error al sincronizar con Firebase", "error");
+  } finally {
+    // Re-habilitar botones después de la sincronización
+    const saveBtn = document.getElementById("saveFirebase");
+    const syncBtn = document.getElementById("syncFirebase");
+    if (saveBtn) saveBtn.disabled = false;
+    if (syncBtn) syncBtn.disabled = false;
+  }
+}
+
 export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
   const estructura = { datos: {} };
   const filas = [...tablaBody.querySelectorAll("tr")];
