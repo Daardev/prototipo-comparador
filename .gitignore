@@ -1,2 +1,5 @@
 # Ignorar la carpeta js y su contenido
 assets/js/
+
+# Ignorar archivos de backup
+backup-prototipo-comparador-*.zip
