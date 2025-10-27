@@ -4,6 +4,8 @@
 
 El proyecto permite crear, editar y gestionar dinámicamente tablas comparativas de productos, almacenando los datos de forma persistente en el navegador mediante `localStorage`, con opción de sincronización en la nube utilizando **Firebase Firestore**.
 
+🌐 **Demo en vivo:** [https://comparador-8nd.pages.dev/](https://comparador-8nd.pages.dev/)
+
 ---
 
 ## 🚀 Características principales

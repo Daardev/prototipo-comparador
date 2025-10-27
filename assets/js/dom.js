@@ -43,7 +43,36 @@ export function crearTablaConEstructura({ secciones, productos, datos, ordenSecc
   headRow.innerHTML = "<th></th>";
   productos.forEach((p) => {
     const th = document.createElement("th");
-    th.textContent = p;
+    
+    // Crear contenedor para nombre y botones
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.alignItems = "center";
+    container.style.justifyContent = "center";
+    container.style.gap = "8px";
+    
+    const span = document.createElement("span");
+    span.textContent = p;
+    span.style.cursor = "pointer";
+    span.className = "product-name";
+    span.title = "Click para editar";
+    
+    const btnEdit = document.createElement("button");
+    btnEdit.className = "edit-product";
+    btnEdit.textContent = "✏️";
+    btnEdit.title = "Editar nombre";
+    btnEdit.style.fontSize = "0.9em";
+    
+    const btnDel = document.createElement("button");
+    btnDel.className = "delete-product";
+    btnDel.textContent = "🗑️";
+    btnDel.title = "Eliminar producto";
+    btnDel.style.fontSize = "0.9em";
+    
+    container.appendChild(span);
+    container.appendChild(btnEdit);
+    container.appendChild(btnDel);
+    th.appendChild(container);
     headRow.appendChild(th);
   });
   tablaHead.appendChild(headRow);
