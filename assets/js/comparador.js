@@ -197,42 +197,78 @@ onAuthStateChanged(auth, (user) => {
     }
   });
 
-  // === Resetear campo ===
-  tablaBody.addEventListener("click", (e) => {
-    if (e.target.classList.contains("reset-field")) {
-      const textarea = e.target.parentElement.querySelector("textarea");
-      textarea.value = "";
+  // === Delegación de clicks en tabla: reset, editar, eliminar ===
+  tablaBody.addEventListener("click", async (e) => {
+    // Usar closest para soportar clicks sobre los emojis/text nodes dentro de los botones
+    const resetBtn = e.target.closest && e.target.closest('.reset-field');
+    if (resetBtn) {
+      const textarea = resetBtn.parentElement.querySelector("textarea");
+      if (textarea) textarea.value = "";
       const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
       guardarEnLocalStorage(estructura, categoria);
       mostrarMensaje("Campo reseteado.", "info");
+      return;
     }
-  });
 
-  // === Eliminar fila ===
-  tablaBody.addEventListener("click", async (e) => {
-    if (e.target.classList.contains("delete-row")) {
-      const fila = e.target.closest("tr");
+    const editBtn = e.target.closest && e.target.closest('.edit-name');
+    if (editBtn) {
+      const fila = editBtn.closest("tr");
       if (!fila) return;
-      const nombre = limpiarTexto(fila.querySelector("td").textContent);
-      if (!confirm(`¿Eliminar "${nombre}"?`)) return;
-      
-      fila.remove();
+
+      const celdaNombre = fila.querySelector("td");
+      const nombreActual = limpiarTexto(celdaNombre.textContent);
+      const nuevoNombre = prompt("Editar nombre:", nombreActual);
+      if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === nombreActual) return;
+
+      // Reemplazar texto y mantener botones
+      const btnEditNode = celdaNombre.querySelector(".edit-name");
+      const btnDelNode = celdaNombre.querySelector(".delete-row");
+      celdaNombre.textContent = nuevoNombre.trim() + " ";
+      if (btnEditNode) celdaNombre.appendChild(btnEditNode);
+      celdaNombre.appendChild(document.createTextNode(" "));
+      if (btnDelNode) celdaNombre.appendChild(btnDelNode);
+
+      // Guardar la estructura actualizada
       const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
       guardarEnLocalStorage(estructura, categoria);
-      
+
       // Guardar también en Firebase
       try {
         estructura.ultimaActualizacion = Date.now();
         estructura.version = "1.0";
         const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
-        
-        // Usar setDoc SIN merge para sobrescribir completamente
+        await setDoc(docRef, estructura);
+        mostrarMensaje("Nombre actualizado y guardado en Firebase.", "success");
+      } catch (error) {
+        console.error("Error al guardar edición en Firebase:", error);
+        mostrarMensaje("Nombre actualizado localmente, pero error al sincronizar con Firebase.", "warning");
+      }
+      return;
+    }
+
+    const delBtn = e.target.closest && e.target.closest('.delete-row');
+    if (delBtn) {
+      const fila = delBtn.closest("tr");
+      if (!fila) return;
+      const nombre = limpiarTexto(fila.querySelector("td").textContent);
+      if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+
+      fila.remove();
+      const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
+      guardarEnLocalStorage(estructura, categoria);
+
+      // Guardar también en Firebase
+      try {
+        estructura.ultimaActualizacion = Date.now();
+        estructura.version = "1.0";
+        const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
         await setDoc(docRef, estructura);
         mostrarMensaje("Fila eliminada y guardada en Firebase.", "success");
       } catch (error) {
         console.error("Error al guardar eliminación en Firebase:", error);
         mostrarMensaje("Fila eliminada localmente, pero error al sincronizar con Firebase.", "warning");
       }
+      return;
     }
   });
 });
