@@ -36,7 +36,7 @@ function resolverClave(datos, seccion, nombre) {
   return coincidencias.length === 1 ? coincidencias[0] : null;
 }
 
-export function crearTablaConEstructura({ secciones, productos, datos }, tablaHead, tablaBody) {
+export function crearTablaConEstructura({ secciones, productos, datos, ordenSecciones }, tablaHead, tablaBody) {
   limpiarTabla(tablaHead, tablaBody);
 
   const headRow = document.createElement("tr");
@@ -48,7 +48,14 @@ export function crearTablaConEstructura({ secciones, productos, datos }, tablaHe
   });
   tablaHead.appendChild(headRow);
 
-  Object.entries(secciones).forEach(([nombreSeccion, listaCaracteristicas]) => {
+  // Usar el orden guardado si existe, sino usar Object.entries
+  const seccionesOrdenadas = ordenSecciones && ordenSecciones.length > 0
+    ? ordenSecciones.map(nombre => [nombre, secciones[nombre]])
+    : Object.entries(secciones);
+
+  seccionesOrdenadas.forEach(([nombreSeccion, listaCaracteristicas]) => {
+    if (!listaCaracteristicas) return; // Skip si la sección no existe
+    
     const trSeccion = crearEncabezadoSeccion(nombreSeccion, productos);
     tablaBody.appendChild(trSeccion);
 
@@ -57,7 +64,12 @@ export function crearTablaConEstructura({ secciones, productos, datos }, tablaHe
         ? listaCaracteristicas
         : Object.keys(listaCaracteristicas || {});
 
-    caracteristicas.forEach((nombreCaracteristica) => {
+    // Ordenar alfabéticamente las características/especificaciones
+    const caracteristicasOrdenadas = [...caracteristicas].sort((a, b) => {
+      return a.localeCompare(b, 'es', { sensitivity: 'base' });
+    });
+
+    caracteristicasOrdenadas.forEach((nombreCaracteristica) => {
       const nombreLimpio = limpiarTexto(nombreCaracteristica);
       const tr = document.createElement("tr");
 
@@ -174,6 +186,21 @@ export function agregarFilaASeccion(tablaBody, nombre, tituloSeccion, categoria,
     seccionTR = tr;
   }
 
+  // Verificar si ya existe una característica/especificación con el mismo nombre en esta sección
+  const nombreNormalizado = normalizar(nombre);
+  let filaActual = seccionTR.nextElementSibling;
+  while (filaActual && !filaActual.querySelector("th.section-title")) {
+    const td = filaActual.querySelector("td");
+    if (td) {
+      const nombreExistente = td.textContent.replace(/✏️|🗑️/g, "").trim();
+      if (normalizar(nombreExistente) === nombreNormalizado) {
+        // Ya existe, retornar false para indicar duplicado
+        return false;
+      }
+    }
+    filaActual = filaActual.nextElementSibling;
+  }
+
   const tr = document.createElement("tr");
   const tdNombre = document.createElement("td");
   tdNombre.textContent = nombre + " ";
@@ -211,4 +238,5 @@ export function agregarFilaASeccion(tablaBody, nombre, tituloSeccion, categoria,
   }
 
   tablaBody.insertBefore(tr, seccionTR.nextSibling);
+  return true; // Retornar true para indicar que se agregó correctamente
 }

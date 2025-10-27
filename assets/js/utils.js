@@ -55,6 +55,7 @@ export function mostrarMensaje(mensaje, tipo) {
   if (tipo === "success") div.style.backgroundColor = "#4CAF50";
   else if (tipo === "error") div.style.backgroundColor = "#f44336";
   else if (tipo === "info") div.style.backgroundColor = "#2196F3";
+  else if (tipo === "warning") div.style.backgroundColor = "#dc3545";
   div.style.zIndex = "1000";
   document.body.appendChild(div);
   setTimeout(() => div.remove(), 3000);

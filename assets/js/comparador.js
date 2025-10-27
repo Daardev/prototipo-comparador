@@ -94,12 +94,21 @@ onAuthStateChanged(auth, (user) => {
         const datosRemotos = docSnapshot.data();
         const estructuraRemota = sanitizeEstructura(datosRemotos, categoria, CONFIG);
         
+        // Usar las secciones guardadas o las por defecto
+        const seccionesAUsar = (estructuraRemota.secciones && Object.keys(estructuraRemota.secciones).length > 0)
+          ? estructuraRemota.secciones
+          : CONFIG.Secciones;
+        
+        // Usar el orden guardado o el orden por defecto
+        const ordenAUsar = estructuraRemota.ordenSecciones || Object.keys(CONFIG.Secciones);
+        
         // Actualizar la tabla con los datos remotos
         crearTablaConEstructura(
           { 
-            secciones: CONFIG.Secciones, 
+            secciones: seccionesAUsar, 
             productos: CONFIG[categoria], 
-            datos: estructuraRemota.datos 
+            datos: estructuraRemota.datos,
+            ordenSecciones: ordenAUsar
           },
           tablaHead,
           tablaBody
@@ -119,26 +128,62 @@ onAuthStateChanged(auth, (user) => {
   cleanupFunctions.push(() => unsubscribe());
 
   // === Botones "+ Agregar" ===
-  document.addEventListener("agregarCaracteristica", (e) => {
+  document.addEventListener("agregarCaracteristica", async (e) => {
     const nombre = e.detail;
-    agregarFilaASeccion(tablaBody, nombre, "Características", categoria, CONFIG);
+    const agregado = agregarFilaASeccion(tablaBody, nombre, "Características", categoria, CONFIG);
+    
+    // Si ya existe, mostrar warning y salir
+    if (!agregado) {
+      mostrarMensaje(`La característica "${nombre}" ya existe.`, "warning");
+      return;
+    }
+    
     const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
     guardarEnLocalStorage(estructura, categoria);
-    mostrarMensaje("Característica agregada.", "success");
+    
+    // Guardar también en Firebase
+    try {
+      estructura.ultimaActualizacion = Date.now();
+      estructura.version = "1.0";
+      const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
+      await setDoc(docRef, estructura);
+      mostrarMensaje("Característica agregada y guardada en Firebase.", "success");
+    } catch (error) {
+      console.error("Error al guardar característica en Firebase:", error);
+      mostrarMensaje("Característica agregada localmente, pero error al sincronizar con Firebase.", "warning");
+    }
   });
 
-  document.addEventListener("agregarEspecificacion", (e) => {
+  document.addEventListener("agregarEspecificacion", async (e) => {
     const nombre = e.detail;
-    agregarFilaASeccion(
+    const agregado = agregarFilaASeccion(
       tablaBody,
       nombre,
       "Especificaciones técnicas",
       categoria,
       CONFIG
     );
+    
+    // Si ya existe, mostrar warning y salir
+    if (!agregado) {
+      mostrarMensaje(`La especificación "${nombre}" ya existe.`, "warning");
+      return;
+    }
+    
     const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
     guardarEnLocalStorage(estructura, categoria);
-    mostrarMensaje("Especificación agregada.", "success");
+    
+    // Guardar también en Firebase
+    try {
+      estructura.ultimaActualizacion = Date.now();
+      estructura.version = "1.0";
+      const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
+      await setDoc(docRef, estructura);
+      mostrarMensaje("Especificación agregada y guardada en Firebase.", "success");
+    } catch (error) {
+      console.error("Error al guardar especificación en Firebase:", error);
+      mostrarMensaje("Especificación agregada localmente, pero error al sincronizar con Firebase.", "warning");
+    }
   });
 
   // === Guardado automático ===
@@ -164,16 +209,30 @@ onAuthStateChanged(auth, (user) => {
   });
 
   // === Eliminar fila ===
-  tablaBody.addEventListener("click", (e) => {
+  tablaBody.addEventListener("click", async (e) => {
     if (e.target.classList.contains("delete-row")) {
       const fila = e.target.closest("tr");
       if (!fila) return;
       const nombre = limpiarTexto(fila.querySelector("td").textContent);
       if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+      
       fila.remove();
       const estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
       guardarEnLocalStorage(estructura, categoria);
-      mostrarMensaje("Fila eliminada.", "success");
+      
+      // Guardar también en Firebase
+      try {
+        estructura.ultimaActualizacion = Date.now();
+        estructura.version = "1.0";
+        const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
+        
+        // Usar setDoc SIN merge para sobrescribir completamente
+        await setDoc(docRef, estructura);
+        mostrarMensaje("Fila eliminada y guardada en Firebase.", "success");
+      } catch (error) {
+        console.error("Error al guardar eliminación en Firebase:", error);
+        mostrarMensaje("Fila eliminada localmente, pero error al sincronizar con Firebase.", "warning");
+      }
     }
   });
 });
@@ -184,7 +243,7 @@ async function crearTabla() {
   tablaBody.innerHTML = "";
 
   const productos = CONFIG[categoria];
-  const secciones = JSON.parse(JSON.stringify(CONFIG.Secciones));
+  const seccionesPorDefecto = JSON.parse(JSON.stringify(CONFIG.Secciones));
 
   try {
     // 1. Intentar cargar datos de Firestore primero (compartido)
@@ -195,8 +254,22 @@ async function crearTabla() {
       // Si hay datos en Firestore, usarlos
       const firestoreData = docSnap.data();
       const estructuraFirestore = sanitizeEstructura(firestoreData, categoria, CONFIG);
+      
+      // Usar las secciones guardadas o las por defecto
+      const seccionesAUsar = (estructuraFirestore.secciones && Object.keys(estructuraFirestore.secciones).length > 0) 
+        ? estructuraFirestore.secciones 
+        : seccionesPorDefecto;
+      
+      // Usar el orden guardado o el orden por defecto
+      const ordenAUsar = estructuraFirestore.ordenSecciones || Object.keys(CONFIG.Secciones);
+      
       crearTablaConEstructura(
-        { secciones, productos, datos: estructuraFirestore.datos },
+        { 
+          secciones: seccionesAUsar, 
+          productos, 
+          datos: estructuraFirestore.datos,
+          ordenSecciones: ordenAUsar
+        },
         tablaHead, 
         tablaBody
       );
@@ -216,14 +289,27 @@ async function crearTabla() {
     let estructuraLimpia = sanitizeEstructura(localBackup, categoria, CONFIG);
 
     if (!estructuraLimpia || typeof estructuraLimpia !== "object") {
-      estructuraLimpia = { datos: {} };
+      estructuraLimpia = { datos: {}, secciones: seccionesPorDefecto };
     }
     if (!estructuraLimpia.datos) {
-      estructuraLimpia = { datos: estructuraLimpia };
+      estructuraLimpia = { datos: estructuraLimpia, secciones: seccionesPorDefecto };
     }
 
+    // Usar las secciones guardadas o las por defecto
+    const seccionesAUsar = (estructuraLimpia.secciones && Object.keys(estructuraLimpia.secciones).length > 0) 
+      ? estructuraLimpia.secciones 
+      : seccionesPorDefecto;
+
+    // Usar el orden guardado o el orden por defecto
+    const ordenAUsar = estructuraLimpia.ordenSecciones || Object.keys(CONFIG.Secciones);
+
     crearTablaConEstructura(
-      { secciones, productos, datos: estructuraLimpia.datos },
+      { 
+        secciones: seccionesAUsar, 
+        productos, 
+        datos: estructuraLimpia.datos,
+        ordenSecciones: ordenAUsar
+      },
       tablaHead,
       tablaBody
     );
@@ -235,7 +321,7 @@ async function crearTabla() {
 
   // 3. Si no hay datos en ningún lado, crear estructura inicial
   const estructuraInicial = sanitizeEstructura(
-    { secciones, productos, datos: {} },
+    { secciones: seccionesPorDefecto, productos, datos: {}, ordenSecciones: Object.keys(CONFIG.Secciones) },
     categoria,
     CONFIG
   );
@@ -263,9 +349,9 @@ async function guardarDatos() {
     
     guardarEnLocalStorage(estructura, categoria);
     
-    // Guardar en ruta compartida
+    // Guardar en ruta compartida - SIN merge para sobrescribir completamente
     const docRef = doc(db, "comparadores", "shared", "categorias", categoria);
-    await setDoc(docRef, estructura, { merge: true });
+    await setDoc(docRef, estructura);
     mostrarMensaje("Datos guardados en Firebase.", "success");
   } catch (error) {
     console.error("Error al guardar en Firebase:", error);
@@ -302,11 +388,20 @@ async function sincronizarDatos() {
       tablaHead.innerHTML = "";
       tablaBody.innerHTML = "";
       
+      // Usar las secciones guardadas o las por defecto
+      const seccionesAUsar = (estructuraRemota.secciones && Object.keys(estructuraRemota.secciones).length > 0)
+        ? estructuraRemota.secciones
+        : CONFIG.Secciones;
+      
+      // Usar el orden guardado o el orden por defecto
+      const ordenAUsar = estructuraRemota.ordenSecciones || Object.keys(CONFIG.Secciones);
+      
       // Actualizar la tabla con los datos remotos
       const estructuraParaTabla = { 
-        secciones: CONFIG.Secciones, 
+        secciones: seccionesAUsar, 
         productos: CONFIG[categoria], 
-        datos: estructuraRemota.datos 
+        datos: estructuraRemota.datos,
+        ordenSecciones: ordenAUsar
       };
       
       crearTablaConEstructura(
@@ -334,7 +429,12 @@ async function sincronizarDatos() {
 }
 
 export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
-  const estructura = { datos: {} };
+  const estructura = { 
+    datos: {},
+    secciones: {},
+    productos: CONFIG[categoria],
+    ordenSecciones: [] // Nuevo: mantener el orden explícito
+  };
   const filas = [...tablaBody.querySelectorAll("tr")];
   let seccionActual = "";
 
@@ -342,6 +442,11 @@ export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
     const th = fila.querySelector("th.section-title");
     if (th) {
       seccionActual = th.textContent.replace(/\+?\s*Agregar/g, "").trim();
+      // Inicializar array de características para esta sección
+      if (!estructura.secciones[seccionActual]) {
+        estructura.secciones[seccionActual] = [];
+        estructura.ordenSecciones.push(seccionActual); // Guardar el orden
+      }
       return;
     }
 
@@ -351,6 +456,11 @@ export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
     const nombreCampo = limpiarTexto(celdaNombre.textContent);
     if (!nombreCampo) return;
 
+    // Agregar esta característica a la sección actual
+    if (seccionActual && !estructura.secciones[seccionActual].includes(nombreCampo)) {
+      estructura.secciones[seccionActual].push(nombreCampo);
+    }
+
     const clave = seccionActual ? `${seccionActual}:${nombreCampo}` : nombreCampo;
     estructura.datos[clave] = {};
 
@@ -358,6 +468,13 @@ export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
     CONFIG[categoria].forEach((producto, index) => {
       const valor = celdas[index]?.querySelector("textarea")?.value ?? "";
       estructura.datos[clave][producto] = valor;
+    });
+  });
+
+  // Ordenar alfabéticamente las características dentro de cada sección
+  Object.keys(estructura.secciones).forEach(seccion => {
+    estructura.secciones[seccion].sort((a, b) => {
+      return a.localeCompare(b, 'es', { sensitivity: 'base' });
     });
   });
 
