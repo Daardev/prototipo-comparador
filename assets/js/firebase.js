@@ -3,19 +3,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/fireba
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
-// Suprimir warnings de deprecación de Firebase
-const originalWarn = console.warn;
-console.warn = function(...args) {
-  const message = args.join(' ');
-  // Filtrar warnings específicos de Firebase
-  if (message.includes('@firebase/firestore') || 
-      message.includes('enableIndexedDbPersistence') ||
-      message.includes('deprecated')) {
-    return;
-  }
-  originalWarn.apply(console, args);
-};
-
 const firebaseConfig = {
   apiKey: "AIzaSyAWwN7IbTImrGE5r2lVySfX5-zcVB6Uczs",
   authDomain: "comparacion-281ec.firebaseapp.com",
