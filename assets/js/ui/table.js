@@ -1,5 +1,5 @@
 // table.js
-import { limpiarTexto } from './utils.js';
+import { limpiarTexto } from '../utils/utils.js';
 
 export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
   const estructura = {
@@ -41,6 +41,5 @@ export function obtenerEstructuraActual(tablaBody, categoria, CONFIG) {
     }
   });
 
-  console.log("🧩 Estructura guardada:", estructura);
   return estructura;
 }

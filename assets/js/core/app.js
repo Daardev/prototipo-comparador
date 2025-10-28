@@ -1,4 +1,4 @@
-import { login } from "./auth.js";
+import { login } from "../core/auth.js";
 
 const form = document.getElementById("loginForm");
 const message = document.getElementById("loginMessage");
@@ -16,6 +16,16 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// Toggle password visibility
+const togglePasswordBtn = document.querySelector('.toggle-password');
+if (togglePasswordBtn) {
+  togglePasswordBtn.addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+  });
+}
+
 if (form) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -27,12 +37,12 @@ if (form) {
       await login(email, password, rememberMe);
     } catch (err) {
       message.textContent = err.message;
-      message.classList.add("error");
+      message.className = "message error";
       
       // Limpiar mensaje después de 5 segundos
       setTimeout(() => {
         message.textContent = "";
-        message.classList.remove("error");
+        message.className = "message";
       }, 5000);
     }
   });

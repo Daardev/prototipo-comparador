@@ -1,15 +1,18 @@
 // eventHandlers.js
 // Módulo para configurar todos los event listeners
 
-import { agregarProducto, editarProducto, eliminarProducto } from "./productManager.js";
+import { agregarProducto, editarProducto, eliminarProducto } from "../managers/productManager.js";
 import { 
   agregarCaracteristica, 
   agregarEspecificacion, 
   editarCaracteristica, 
   eliminarCaracteristica,
   resetearCampo
-} from "./caracteristicasManager.js";
-import { guardarEnLocalStorage } from "./storage.js";
+} from "../managers/caracteristicasManager.js";
+import { guardarEnLocalStorage } from "../utils/storage.js";
+import { debounce } from "../ui/dom-optimizado.js";
+import { MENSAJES, TIEMPOS } from "../config/constants.js";
+import { logger } from "../utils/error-handler.js";
 
 /**
  * Configura todos los event listeners de la aplicación
@@ -82,14 +85,16 @@ export function configurarEventListeners(
   tablaBody.addEventListener("click", bodyHandler);
   cleanupFunctions.push(() => tablaBody.removeEventListener("click", bodyHandler));
 
-  // === Guardado automático al editar textareas ===
+  // === Guardado automático al editar textareas con debounce mejorado ===
+  const guardarDebounced = debounce((estructura, categoria) => {
+    guardarEnLocalStorage(estructura, categoria);
+    logger.debug("Guardado automático", { categoria });
+  }, TIEMPOS.DEBOUNCE_INPUT);
+  
   const inputHandler = (e) => {
     if (e.target.tagName === "TEXTAREA") {
-      clearTimeout(e.target._saveTimeout);
-      e.target._saveTimeout = setTimeout(() => {
-        const estructura = obtenerEstructuraFn();
-        guardarEnLocalStorage(estructura, categoria);
-      }, 400);
+      const estructura = obtenerEstructuraFn();
+      guardarDebounced(estructura, categoria);
     }
   };
   
@@ -113,16 +118,26 @@ export function configurarBotones(
   // Botón agregar producto
   const addProductBtn = document.getElementById("addProduct");
   if (addProductBtn) {
+    // Remover listeners previos si existen (prevención de duplicados)
+    const oldHandler = addProductBtn._productHandler;
+    if (oldHandler) {
+      addProductBtn.removeEventListener("click", oldHandler);
+    }
+    
     const addProductHandler = () => agregarProducto(db, categoria, tablaHead, tablaBody, obtenerEstructuraFn);
+    addProductBtn._productHandler = addProductHandler; // Guardar referencia
     addProductBtn.addEventListener("click", addProductHandler);
-    cleanupFunctions.push(() => addProductBtn.removeEventListener("click", addProductHandler));
+    cleanupFunctions.push(() => {
+      addProductBtn.removeEventListener("click", addProductHandler);
+      delete addProductBtn._productHandler;
+    });
   }
 
   // Botón agregar característica global
   const addCaracteristicaBtn = document.querySelector(".btn-agregar-caracteristica-global");
   if (addCaracteristicaBtn) {
     const addCarHandler = () => {
-      const nombre = prompt("Nombre de la nueva característica:");
+      const nombre = prompt(MENSAJES.PROMPT_NUEVA_CARACTERISTICA);
       if (!nombre || !nombre.trim()) return;
       const event = new CustomEvent("agregarCaracteristica", {
         detail: nombre.trim(),
@@ -137,7 +152,7 @@ export function configurarBotones(
   const addEspecificacionBtn = document.querySelector(".btn-agregar-especificacion-global");
   if (addEspecificacionBtn) {
     const addEspHandler = () => {
-      const nombre = prompt("Nombre de la nueva especificación:");
+      const nombre = prompt(MENSAJES.PROMPT_NUEVA_ESPECIFICACION);
       if (!nombre || !nombre.trim()) return;
       const event = new CustomEvent("agregarEspecificacion", {
         detail: nombre.trim(),

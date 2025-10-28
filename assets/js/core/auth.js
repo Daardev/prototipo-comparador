@@ -1,4 +1,4 @@
-import { auth } from "./firebase.js";
+import { auth } from "../config/firebase.js";
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 
 // 🔐 Login

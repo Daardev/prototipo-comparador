@@ -1,7 +1,7 @@
 // estructuraManager.js
 // Módulo para manejar la extracción de la estructura actual de la tabla
 
-import { limpiarTexto } from "./utils.js";
+import { limpiarTexto } from "../utils/utils.js";
 
 /**
  * Extrae la estructura actual de la tabla (productos, secciones, datos)
@@ -28,7 +28,13 @@ export function obtenerEstructuraActual(tablaHead, tablaBody, categoria, CONFIG)
     ordenSecciones: [] // Mantener el orden explícito
   };
   const filas = [...tablaBody.querySelectorAll("tr")];
-  let seccionActual = "";
+  let seccionActual = "Características"; // Iniciar con "Características" por defecto
+  
+  // Inicializar la sección de Características
+  if (!estructura.secciones["Características"]) {
+    estructura.secciones["Características"] = [];
+    estructura.ordenSecciones.push("Características");
+  }
 
   filas.forEach((fila) => {
     const th = fila.querySelector("th.section-title");
@@ -45,15 +51,28 @@ export function obtenerEstructuraActual(tablaHead, tablaBody, categoria, CONFIG)
     const celdaNombre = fila.querySelector("td");
     if (!celdaNombre) return;
 
-    const nombreCampo = limpiarTexto(celdaNombre.textContent);
+    // Buscar el título dentro de la estructura de característica
+    const tituloDiv = celdaNombre.querySelector(".caracteristica-titulo");
+    const nombreCampo = tituloDiv ? limpiarTexto(tituloDiv.textContent) : limpiarTexto(celdaNombre.textContent);
     if (!nombreCampo) return;
 
-    // Agregar esta característica a la sección actual
-    if (seccionActual && !estructura.secciones[seccionActual].includes(nombreCampo)) {
-      estructura.secciones[seccionActual].push(nombreCampo);
+    // Si no hay seccionActual, usar "Características" por defecto
+    const seccion = seccionActual || "Características";
+    
+    // Inicializar la sección si no existe
+    if (!estructura.secciones[seccion]) {
+      estructura.secciones[seccion] = [];
+      if (!estructura.ordenSecciones.includes(seccion)) {
+        estructura.ordenSecciones.push(seccion);
+      }
     }
 
-    const clave = seccionActual ? `${seccionActual}:${nombreCampo}` : nombreCampo;
+    // Agregar esta característica a la sección actual
+    if (!estructura.secciones[seccion].includes(nombreCampo)) {
+      estructura.secciones[seccion].push(nombreCampo);
+    }
+
+    const clave = seccion ? `${seccion}:${nombreCampo}` : nombreCampo;
     estructura.datos[clave] = {};
 
     const celdas = fila.querySelectorAll("td:not(:first-child)");

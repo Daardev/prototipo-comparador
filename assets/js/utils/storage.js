@@ -1,13 +1,7 @@
 // storage.js
 
-import { obtenerEstructuraActual } from './table.js';
-
-export function guardarEnLocalStorage(estructura, categoria, tablaBody, CONFIG) {
+export function guardarEnLocalStorage(estructura, categoria) {
   try {
-    // Si no me pasas estructura/categoria, la calculo yo.
-    if (!estructura && tablaBody && categoria && CONFIG) {
-      estructura = obtenerEstructuraActual(tablaBody, categoria, CONFIG);
-    }
     if (!estructura || !categoria) {
       console.warn('guardarEnLocalStorage: faltan datos, no se guardó.');
       return;

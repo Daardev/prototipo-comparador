@@ -4,32 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Outdoor | Cofradía Partner</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
   <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
   <header>
-    <div class="header-left">
-      <nav class="main-nav">
-        <ul>
-          <li><a href="carpas.html">Carpas</a></li>
-          <li><a href="outdoor.html" class="active">Outdoor</a></li>
-          <li><a href="overland.html">Overland</a></li>
-        </ul>
-      </nav>
-      <button id="logoutBtn">Cerrar sesión</button>
-    </div>
     <h1>Outdoor</h1>
+    <button class="menu-toggle" id="menuToggle" aria-label="Abrir menú">
+      <span class="material-icons">menu</span>
+    </button>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="carpas.html">Carpas</a></li>
+        <li><a href="outdoor.html" class="active">Outdoor</a></li>
+        <li><a href="overland.html">Overland</a></li>
+      </ul>
+      <button id="logoutBtn">Cerrar sesión</button>
+    </nav>
   </header>
 
   <div class="controls">
     <div class="controls-group">
-      <button id="addProduct">➕ Agregar Producto</button>
-      <button class="btn-agregar-caracteristica-global">➕ Agregar Característica</button>
-      <button class="btn-agregar-especificacion-global">➕ Agregar Especificación</button>
+      <button id="addProduct"><span class="material-icons">add</span> Agregar Producto</button>
+      <button class="btn-agregar-caracteristica-global"><span class="material-icons">add</span> Agregar Característica</button>
+      <button class="btn-agregar-especificacion-global"><span class="material-icons">add</span> Agregar Especificación</button>
     </div>
     <div class="controls-group">
-      <button id="saveFirebase">💾 Guardar en Firebase</button>
-      <button id="syncFirebase">🔄 Sincronizar con Firebase</button>
+      <button id="saveFirebase"><span class="material-icons">save</span> Guardar en Firebase</button>
+      <button id="syncFirebase"><span class="material-icons">sync</span> Sincronizar con Firebase</button>
     </div>
   </div>
 
@@ -40,7 +42,7 @@
     </table>
   </div>
 
-  <script src="assets/js/console-silencer.js"></script>
-  <script type="module" src="assets/js/comparador.js"></script>
+  <script src="assets/js/utils/console-silencer.js"></script>
+  <script type="module" src="assets/js/core/comparador.js"></script>
 </body>
 </html>

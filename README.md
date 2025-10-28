@@ -282,8 +282,38 @@ Este proyecto es de código abierto bajo licencia MIT.
 
 ---
 
-## 🔗 Enlaces
+## � Documentación
+
+Este proyecto cuenta con documentación completa en la carpeta [`docs/`](./docs/):
+
+### 📖 Documentación Principal
+- **[INDICE-DOCUMENTACION.md](./docs/INDICE-DOCUMENTACION.md)** - Índice completo de toda la documentación
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Arquitectura original del proyecto
+- **[ARQUITECTURA-V2.md](./docs/ARQUITECTURA-V2.md)** - Nueva arquitectura mejorada
+- **[ESTRUCTURA-CARPETAS.md](./docs/ESTRUCTURA-CARPETAS.md)** - Organización de carpetas (v3.0)
+
+### 🔧 Guías de Desarrollo
+- **[GUIA-MIGRACION.md](./docs/GUIA-MIGRACION.md)** - Cómo usar las nuevas utilidades
+- **[GUIA-MIGRACION-CARPETAS.md](./docs/GUIA-MIGRACION-CARPETAS.md)** - Migración a nueva estructura
+- **[GUIA-TESTING.md](./docs/GUIA-TESTING.md)** - Guía completa de testing
+
+### 📋 Mejoras y Refactorización
+- **[MEJORAS-IMPLEMENTADAS.md](./docs/MEJORAS-IMPLEMENTADAS.md)** - Todas las mejoras del proyecto
+- **[REFACTORIZACION-COMPLETADA.md](./docs/REFACTORIZACION-COMPLETADA.md)** - Resumen de refactorización
+- **[PLAN-REFACTORIZACION.md](./docs/PLAN-REFACTORIZACION.md)** - Plan de optimización
+
+### 🐛 Correcciones
+- **[CORRECCIONES-FINALIZADAS.md](./docs/CORRECCIONES-FINALIZADAS.md)** - Correcciones completadas
+- **[CORRECION-DEPENDENCIAS-CIRCULARES.md](./docs/CORRECION-DEPENDENCIAS-CIRCULARES.md)** - Fix de dependencias
+
+### 📊 Resúmenes Ejecutivos
+- **[RESUMEN-EJECUTIVO.md](./docs/RESUMEN-EJECUTIVO.md)** - Overview del proyecto
+- **[FLUJO.md](./docs/FLUJO.md)** - Flujo de la aplicación
+
+---
+
+## �🔗 Enlaces
 
 - **Demo:** [https://comparador-8nd.pages.dev/](https://comparador-8nd.pages.dev/)
 - **Repositorio:** [https://github.com/Daardev/prototipo-comparador](https://github.com/Daardev/prototipo-comparador)
-- **Documentación Arquitectura:** [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Documentación Completa:** [docs/](./docs/)
