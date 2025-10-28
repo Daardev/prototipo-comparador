@@ -194,7 +194,7 @@ export function agregarFilaASeccion(tablaBody, nombre, tituloSeccion, categoria,
     }
   } else {
     if (seccionId === "caracteristicas") {
-      const primerEncabezado = filas.find(r => r.querySelector("th.section-title"));
+      const primerEncabezado = filas.find(r => r.querySelector("th.section-title-header"));
       if (primerEncabezado) {
         seccionTR = { insertBeforeElement: primerEncabezado };
       } else {
@@ -203,18 +203,18 @@ export function agregarFilaASeccion(tablaBody, nombre, tituloSeccion, categoria,
     } else {
       const tituloNormalizado = normalizar(tituloSeccion);
       const encabezadoSeccion = filas.find(r => {
-        const th = r.querySelector("th.section-title");
-        return th && normalizar(th.textContent).includes(tituloNormalizado);
+        const th = r.querySelector("th.section-title-header");
+        if (!th) return false;
+        const span = th.querySelector("span");
+        const textoEncabezado = span ? span.textContent : th.textContent;
+        return normalizar(textoEncabezado).includes(tituloNormalizado);
       });
       
       if (encabezadoSeccion) {
         seccionTR = encabezadoSeccion;
       } else {
-        const th = createElement("th", { className: "section-title" });
-        th.colSpan = CONFIG[categoria].length + 1;
-        th.textContent = tituloSeccion;
-        const tr = createElement("tr");
-        tr.appendChild(th);
+        // Crear nuevo encabezado de sección
+        const tr = crearEncabezadoSeccion(tituloSeccion, CONFIG[categoria]);
         tablaBody.appendChild(tr);
         seccionTR = tr;
       }

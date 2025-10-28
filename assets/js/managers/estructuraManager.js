@@ -37,9 +37,11 @@ export function obtenerEstructuraActual(tablaHead, tablaBody, categoria, CONFIG)
   }
 
   filas.forEach((fila) => {
-    const th = fila.querySelector("th.section-title");
+    const th = fila.querySelector("th.section-title-header");
     if (th) {
-      seccionActual = th.textContent.replace(/\+?\s*Agregar/g, "").trim();
+      // Extraer el texto del span si existe, sino del th directamente
+      const span = th.querySelector("span");
+      seccionActual = span ? span.textContent.trim() : th.textContent.replace(/\+?\s*Agregar/g, "").trim();
       // Inicializar array de características para esta sección
       if (!estructura.secciones[seccionActual]) {
         estructura.secciones[seccionActual] = [];
